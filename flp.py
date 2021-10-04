@@ -13,9 +13,11 @@ import time
 import random
 from typing import Tuple
 from matplotlib import pyplot as plt
+import numpy as np
 
-Point = namedtuple("Point", "x y")
-HIGHLIGHT_COLOR = "#e11f26"
+
+Point = namedtuple("Point", "x y title")
+HIGHLIGHT_COLOR = "#c7e1eb"
 
 class FlpHandler:
 	
@@ -47,6 +49,7 @@ class FlpHandler:
 			raise NameError("file parameter not passed")
 		
 		result: dict = {"NODE_COORD_SECTION": []}
+
 		x_min: float = None
 		x_max: float = None
 		y_min: float = None
@@ -69,9 +72,10 @@ class FlpHandler:
 					continue
 				elif len(coords) == 3:
 					# Or add a coordinate to the coord section
+					title = coords[0]
 					x = float(coords[1])
 					y = float(coords[2])
-					result["NODE_COORD_SECTION"].append(Point(x, y))
+					result["NODE_COORD_SECTION"].append(Point(x, y, title))
 					
 					# Verify absolute minimums and maximums
 					if x_max is None or x > x_max:
@@ -94,8 +98,8 @@ class FlpHandler:
 				x_min, y_min = y_min, x_min
 			
 			# Add in absolutes
-			result["COORD_MIN"] = Point(x_min, y_min)
-			result["COORD_MAX"] = Point(x_max, y_max)
+			result["COORD_MIN"] = Point(x_min, y_min,"min")
+			result["COORD_MAX"] = Point(x_max, y_max,"max")
 			
 			# Determine an appropriate variance
 			result["X_RESOLUTION"] = (x_max - x_min) / result["DIMENSION"]
@@ -134,7 +138,7 @@ class Timings:
 	
 	# Append a new timer value
 	def add(self, name: str, mark: str = "") -> None:
-		self.timer.append((name, time.clock(), mark))
+		self.timer.append((name, time.process_time(), mark))
 	
 	# Pretty print all timer values, as well as symmetric differences and marked pairs
 	def __str__(self) -> None:
@@ -233,18 +237,41 @@ def plot_points(FLP, facilities = None):
 	"""
 	data = FLP.get_data()
 	fig = plt.figure()
-	fig.canvas.set_window_title("%s Point View" % data["NAME"])
+	# fig.canvas.set_window_title("%s Point View" % data["NAME"])
+
+	# BEGIN - pie chart
+	# circle1 = plt.Circle((0, 0), 100, alpha=0.2, color='r')
+	# circle2 = plt.Circle((0, 0), 90,  alpha=0.2,color='blue')
+	circle3 = plt.Circle((0, 0), 10, alpha=0.1, color='b', clip_on=False)
+
+	# fig, ax = plt.subplots() # note we must use plt.subplots, not plt.subplot
+	# (or if you have an existing figure)
+	fig = plt.gcf()
+	ax = fig.gca()
+
+	ax.add_patch(circle3)
+	mylabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+	mycolors = ["#cccccc", "#cccccc", "#cccccc", "#cccccc","#cccccc"]
+	size1 = np.array([10, 10, 10, 10,10])
+
+	plt.pie(size1,labels = mylabels,radius=10, startangle = 90,colors = mycolors,wedgeprops=dict(edgecolor='black'),frame=True)
+	plt.rcParams['lines.linewidth'] = 1
+	plt.rcParams['patch.edgecolor'] = 'black' 
+	# plt.legend()
+	# END pie chart
 
 	if facilities is None:
 	
 		# Set up data points
-		x_data = [x for x, y in data["NODE_COORD_SECTION"]]
-		y_data = [y for x, y in data["NODE_COORD_SECTION"]]
+		x_data = [x for x, y,t in data["NODE_COORD_SECTION"]]
+		y_data = [y for x, y,t in data["NODE_COORD_SECTION"]]
 	
 		# Only show client points
-		plt.plot(x_data, y_data, "o", color=HIGHLIGHT_COLOR)
+		plt.plot(x_data, y_data, "o", color=HIGHLIGHT_COLOR,markersize=20)
 		for i in range(len(data["NODE_COORD_SECTION"])):
-			plt.text(data["NODE_COORD_SECTION"][i].x, data["NODE_COORD_SECTION"][i].y, str(i+1))
+			# plt.text(data["NODE_COORD_SECTION"][i].x, data["NODE_COORD_SECTION"][i].y, str(i+1))
+			plt.text(data["NODE_COORD_SECTION"][i].x, data["NODE_COORD_SECTION"][i].y, data["NODE_COORD_SECTION"][i].title)
+			
 		plt.suptitle(data["COMMENT"])
 		
 	else:
